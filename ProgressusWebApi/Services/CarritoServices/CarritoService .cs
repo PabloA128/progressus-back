@@ -1,5 +1,6 @@
 ﻿using ProgressusWebApi.Models.MerchModels;
 using System.Collections.Concurrent;
+using WebApiMercadoPago.Repositories.Interface;
 
 namespace ProgressusWebApi.Services.CarritoServices
 {
@@ -11,9 +12,19 @@ namespace ProgressusWebApi.Services.CarritoServices
         {
             if (_carritos.TryGetValue(usuarioId, out var carrito))
             {
+                // Calcular el total sumando los subtotales de todos los items
+                carrito.Total = carrito.Items.Sum(item => item.Subtotal);
                 return carrito;
             }
-            return new Carrito { UsuarioId = usuarioId };
+
+            // Si no existe, crear un nuevo carrito vacío
+            // return new Carrito { UsuarioId = usuarioId };
+            return new Carrito
+            {
+                UsuarioId = usuarioId,
+                Items = new List<CarritoItem>(),
+                Total = 0
+            };
         }
 
         public async Task AgregarItemAlCarritoAsync(string usuarioId, CarritoItem item)
@@ -36,8 +47,11 @@ namespace ProgressusWebApi.Services.CarritoServices
 
         public async Task EliminarItemDelCarritoAsync(string usuarioId, string productoId)
         {
+            if (!int.TryParse(productoId, out int proId))
+                return;
+
             var carrito = await ObtenerCarritoAsync(usuarioId);
-            var itemExistente = carrito.Items.FirstOrDefault(i => i.ProductoId == productoId);
+            var itemExistente = carrito.Items.FirstOrDefault(i => i.ProductoId == proId);
 
             if (itemExistente != null)
             {
